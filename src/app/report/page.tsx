@@ -108,7 +108,7 @@ export default function ReportPage() {
                   tickFormatter={(value) => `$${value}`}
                 />
                 <Tooltip 
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, undefined]}
+                  formatter={(value) => [`$${Number(value).toFixed(2)}`, undefined]}
                   cursor={{ fill: '#F3F4F6' }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                 />
