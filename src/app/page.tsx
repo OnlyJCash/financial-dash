@@ -1,65 +1,241 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState } from 'react';
+import { Container, Row, Col, Card, Button, Badge, Modal, Form } from 'react-bootstrap';
+import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
+import Link from 'next/link';
+import { PlusCircle, Bell, X, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { format, isPast, isToday } from 'date-fns';
+
+export default function DashboardPage() {
+  const { balance, movements, reminders, dismissReminder, addReminder } = useApp();
+  const { user } = useAuth();
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderForm, setReminderForm] = useState({
+    title: '',
+    type: 'once' as 'once' | 'recurrent',
+    dueDate: new Date().toISOString().split('T')[0]
+  });
+
+  // Get only un-dismissed reminders
+  const activeReminders = reminders.filter(r => !r.dismissed);
+  
+  // Recent movements (last 5)
+  const recentMovements = [...movements]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+
+  const getReminderVariant = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isPast(date) && !isToday(date)) return 'danger';
+    if (isToday(date)) return 'warning';
+    return 'primary';
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <Container>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 className="fw-bold mb-0">Dashboard</h2>
+          <p className="text-muted mb-0">Welcome back, {user?.username}!</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <Link href="/movements/new" passHref legacyBehavior>
+          <Button variant="primary" className="d-flex align-items-center gap-2">
+            <PlusCircle size={18} /> Add Movement
+          </Button>
+        </Link>
+      </div>
+
+      <Row className="g-4 mb-4">
+        {/* Balance Card */}
+        <Col md={4}>
+          <Card className="h-100 bg-primary text-white shadow-sm">
+            <Card.Body className="d-flex flex-column justify-content-center">
+              <h6 className="text-white-50 text-uppercase fw-semibold mb-2">Total Balance</h6>
+              <h2 className="display-5 fw-bold mb-0">
+                ${balance.toFixed(2)}
+              </h2>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Reminders Card */}
+        <Col md={8}>
+          <Card className="h-100 shadow-sm border-0">
+            <Card.Header className="bg-white border-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-2">
+                <Bell size={20} className="text-primary" />
+                <h5 className="mb-0 fw-bold">Active Reminders</h5>
+                <Badge bg="primary" pill className="ms-2">
+                  {activeReminders.length}
+                </Badge>
+              </div>
+              <Button variant="outline-primary" size="sm" onClick={() => setShowReminderModal(true)}>
+                Add
+              </Button>
+            </Card.Header>
+            <Card.Body>
+              {activeReminders.length === 0 ? (
+                <div className="text-center text-muted py-3">
+                  <p className="mb-0">You have no active reminders.</p>
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-2">
+                  {activeReminders.map(reminder => (
+                    <div 
+                      key={reminder.id} 
+                      className={`d-flex align-items-center justify-content-between p-3 rounded border-start border-4 border-${getReminderVariant(reminder.dueDate)} bg-light`}
+                    >
+                      <div>
+                        <div className="fw-semibold d-flex align-items-center gap-2">
+                          {reminder.title}
+                          {reminder.type === 'recurrent' && (
+                            <Badge bg="secondary" className="fw-normal" style={{ fontSize: '0.65em' }}>Recurrent</Badge>
+                          )}
+                        </div>
+                        <small className="text-muted">
+                          Due: {format(new Date(reminder.dueDate), 'MMM dd, yyyy')}
+                        </small>
+                      </div>
+                      <Button 
+                        variant="link" 
+                        className="text-muted p-0" 
+                        onClick={() => dismissReminder(reminder.id)}
+                        title="Dismiss Reminder"
+                      >
+                        <X size={20} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Recent Movements */}
+      <Card className="shadow-sm border-0">
+        <Card.Header className="bg-white border-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
+          <div className="d-flex align-items-center gap-2">
+            <Activity size={20} className="text-primary" />
+            <h5 className="mb-0 fw-bold">Recent Movements</h5>
+          </div>
+          <Link href="/movements" className="text-decoration-none small fw-semibold">
+            View All
+          </Link>
+        </Card.Header>
+        <Card.Body>
+          {recentMovements.length === 0 ? (
+            <div className="text-center text-muted py-4">
+              <p className="mb-0">No movements found. Add one to get started!</p>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th className="border-0 text-muted small text-uppercase">Date</th>
+                    <th className="border-0 text-muted small text-uppercase">Description</th>
+                    <th className="border-0 text-muted small text-uppercase">Type</th>
+                    <th className="border-0 text-muted small text-uppercase text-end">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentMovements.map((movement) => {
+                    const isIncome = movement.amount > 0;
+                    return (
+                      <tr key={movement.id} className={`movement-item ${isIncome ? 'income' : 'expense'}`}>
+                        <td>{format(new Date(movement.date), 'MMM dd, yyyy')}</td>
+                        <td>
+                          <div className="fw-semibold">{movement.shortDescription}</div>
+                          <small className="text-muted d-block text-truncate" style={{ maxWidth: '250px' }}>
+                            {movement.longDescription}
+                          </small>
+                        </td>
+                        <td>
+                          <Badge bg="light" text="dark" className="fw-normal">
+                            {movement.paymentType}
+                          </Badge>
+                        </td>
+                        <td className="text-end">
+                          <span className={`fw-bold d-flex align-items-center justify-content-end gap-1 ${isIncome ? 'text-success' : 'text-danger'}`}>
+                            {isIncome ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                            ${Math.abs(movement.amount).toFixed(2)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card.Body>
+      </Card>
+
+      {/* Add Reminder Modal */}
+      <Modal show={showReminderModal} onHide={() => setShowReminderModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Add New Reminder</Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={(e) => {
+          e.preventDefault();
+          addReminder({
+            title: reminderForm.title,
+            type: reminderForm.type,
+            dueDate: reminderForm.dueDate,
+            dismissed: false
+          });
+          setShowReminderModal(false);
+          setReminderForm({
+            title: '',
+            type: 'once',
+            dueDate: new Date().toISOString().split('T')[0]
+          });
+        }}>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Reminder Title</Form.Label>
+              <Form.Control 
+                type="text" 
+                required 
+                value={reminderForm.title}
+                onChange={e => setReminderForm({...reminderForm, title: e.target.value})}
+                placeholder="e.g. Pay Internet Bill"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Type</Form.Label>
+              <Form.Select 
+                value={reminderForm.type}
+                onChange={e => setReminderForm({...reminderForm, type: e.target.value as 'once' | 'recurrent'})}
+              >
+                <option value="once">One-time</option>
+                <option value="recurrent">Recurrent</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Due Date</Form.Label>
+              <Form.Control 
+                type="date" 
+                required
+                value={reminderForm.dueDate}
+                onChange={e => setReminderForm({...reminderForm, dueDate: e.target.value})}
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={() => setShowReminderModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit">
+              Save Reminder
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+    </Container>
   );
 }
