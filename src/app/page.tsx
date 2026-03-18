@@ -9,8 +9,15 @@ import { PlusCircle, Bell, X, ArrowUpRight, ArrowDownRight, Activity } from 'luc
 import { format, isPast, isToday } from 'date-fns';
 
 export default function DashboardPage() {
-  const { balance, movements, reminders, dismissReminder, addReminder } = useApp();
+  const { balance, movements, reminders, dismissReminder, addReminder, activeAccount } = useApp();
   const { user } = useAuth();
+  
+  const getCurrencySymbol = () => {
+    if (activeAccount?.currency === 'EUR') return '€';
+    if (activeAccount?.currency === 'GBP') return '£';
+    return '$';
+  };
+
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderForm, setReminderForm] = useState({
     title: '',
@@ -54,7 +61,7 @@ export default function DashboardPage() {
             <Card.Body className="d-flex flex-column justify-content-center">
               <h6 className="text-white-50 text-uppercase fw-semibold mb-2">Total Balance</h6>
               <h2 className="display-5 fw-bold mb-0">
-                ${balance.toFixed(2)}
+                {getCurrencySymbol()}{balance.toFixed(2)}
               </h2>
             </Card.Body>
           </Card>
@@ -162,7 +169,7 @@ export default function DashboardPage() {
                         <td className="text-end">
                           <span className={`fw-bold d-flex align-items-center justify-content-end gap-1 ${isIncome ? 'text-success' : 'text-danger'}`}>
                             {isIncome ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                            ${Math.abs(movement.amount).toFixed(2)}
+                            {getCurrencySymbol()}{Math.abs(movement.amount).toFixed(2)}
                           </span>
                         </td>
                       </tr>

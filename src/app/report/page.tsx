@@ -17,7 +17,13 @@ interface MonthlyData {
 }
 
 export default function ReportPage() {
-  const { movements } = useApp();
+  const { movements, activeAccount } = useApp();
+
+  const getCurrencySymbol = () => {
+    if (activeAccount?.currency === 'EUR') return '€';
+    if (activeAccount?.currency === 'GBP') return '£';
+    return '$';
+  };
 
   // Aggregate movements by month
   const monthlyData = useMemo(() => {
@@ -105,10 +111,10 @@ export default function ReportPage() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: '#6B7280' }}
-                  tickFormatter={(value) => `$${value}`}
+                  tickFormatter={(value) => `${getCurrencySymbol()}${value}`}
                 />
                 <Tooltip 
-                  formatter={(value) => [`$${Number(value).toFixed(2)}`, undefined]}
+                  formatter={(value) => [`${getCurrencySymbol()}${Number(value).toFixed(2)}`, undefined]}
                   cursor={{ fill: '#F3F4F6' }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                 />
@@ -144,11 +150,11 @@ export default function ReportPage() {
                   return (
                     <tr key={data.monthYear}>
                       <td className="ps-4 fw-semibold">{data.label}</td>
-                      <td className="text-end text-success fw-medium">${data.income.toFixed(2)}</td>
-                      <td className="text-end text-danger fw-medium">${data.expense.toFixed(2)}</td>
+                      <td className="text-end text-success fw-medium">{getCurrencySymbol()}{data.income.toFixed(2)}</td>
+                      <td className="text-end text-danger fw-medium">{getCurrencySymbol()}{data.expense.toFixed(2)}</td>
                       <td className="text-end pe-4">
                         <span className={`fw-bold ${netBalance >= 0 ? 'text-success' : 'text-danger'}`}>
-                          ${netBalance.toFixed(2)}
+                          {getCurrencySymbol()}{netBalance.toFixed(2)}
                         </span>
                       </td>
                       <td className="text-end pe-4 text-muted">{data.totalMovements}</td>

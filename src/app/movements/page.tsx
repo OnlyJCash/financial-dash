@@ -8,10 +8,20 @@ import { PlusCircle, Search, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide
 import { format, isWithinInterval, parseISO } from 'date-fns';
 
 export default function MovementsPage() {
-  const { movements, deleteMovement } = useApp();
+  const { movements, deleteMovement, labels, activeAccount } = useApp();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [labelFilter, setLabelFilter] = useState('');
+
+  const getCurrencySymbol = () => {
+    if (activeAccount?.currency === 'EUR') return '€';
+    if (activeAccount?.currency === 'GBP') return '£';
+    return '$';
+  };
+
+  // Helper to get label by id
+  const getLabel = (labelId?: string) => labels.find(l => l.id === labelId);
 
   // Filter movements
   const filteredMovements = movements.filter(movement => {
@@ -31,7 +41,14 @@ export default function MovementsPage() {
       movement.shortDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.longDescription.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return matchesDate && matchesSearch;
+    let matchesLabel = true;
+    if (labelFilter === '__none__') {
+      matchesLabel = !movement.labelId;
+    } else if (labelFilter) {
+      matchesLabel = movement.labelId === labelFilter;
+    }
+
+    return matchesDate && matchesSearch && matchesLabel;
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
@@ -51,7 +68,7 @@ export default function MovementsPage() {
       <Card className="shadow-sm border-0 mb-4">
         <Card.Body>
           <Form className="row g-3">
-            <div className="col-md-4">
+            <div className="col-md-3">
               <Form.Label className="small text-muted fw-semibold">Search</Form.Label>
               <InputGroup>
                 <InputGroup.Text className="bg-white border-end-0">
@@ -66,7 +83,20 @@ export default function MovementsPage() {
                 />
               </InputGroup>
             </div>
-            <div className="col-md-4">
+            <div className="col-md-3">
+              <Form.Label className="small text-muted fw-semibold">Label</Form.Label>
+              <Form.Select
+                value={labelFilter}
+                onChange={e => setLabelFilter(e.target.value)}
+              >
+                <option value="">All labels</option>
+                <option value="__none__">No label</option>
+                {labels.map(label => (
+                  <option key={label.id} value={label.id}>{label.name}</option>
+                ))}
+              </Form.Select>
+            </div>
+            <div className="col-md-3">
               <Form.Label className="small text-muted fw-semibold">Start Date</Form.Label>
               <Form.Control 
                 type="date" 
@@ -74,7 +104,7 @@ export default function MovementsPage() {
                 onChange={e => setStartDate(e.target.value)}
               />
             </div>
-            <div className="col-md-4">
+            <div className="col-md-3">
               <Form.Label className="small text-muted fw-semibold">End Date</Form.Label>
               <Form.Control 
                 type="date" 
@@ -94,6 +124,7 @@ export default function MovementsPage() {
                 <tr>
                   <th className="border-0 text-muted small text-uppercase py-3 ps-4">Date</th>
                   <th className="border-0 text-muted small text-uppercase py-3">Description</th>
+                  <th className="border-0 text-muted small text-uppercase py-3">Label</th>
                   <th className="border-0 text-muted small text-uppercase py-3">Type</th>
                   <th className="border-0 text-muted small text-uppercase py-3 text-end">Amount</th>
                   <th className="border-0 text-muted small text-uppercase py-3 text-end pe-4">Actions</th>
@@ -102,13 +133,14 @@ export default function MovementsPage() {
               <tbody>
                 {filteredMovements.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-5 text-muted">
+                    <td colSpan={6} className="text-center py-5 text-muted">
                       No movements found matching your filters.
                     </td>
                   </tr>
                 ) : (
                   filteredMovements.map(movement => {
                     const isIncome = movement.amount > 0;
+                    const label = getLabel(movement.labelId);
                     return (
                       <tr key={movement.id} className={`movement-item ${isIncome ? 'income' : 'expense'}`}>
                         <td className="ps-4 text-nowrap">
@@ -121,6 +153,18 @@ export default function MovementsPage() {
                           </small>
                         </td>
                         <td>
+                          {label ? (
+                            <Badge
+                              pill
+                              style={{ backgroundColor: label.color, color: '#fff' }}
+                            >
+                              {label.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
+                        </td>
+                        <td>
                           <Badge bg="light" text="dark" className="fw-normal border">
                             {movement.paymentType}
                           </Badge>
@@ -128,7 +172,7 @@ export default function MovementsPage() {
                         <td className="text-end text-nowrap">
                           <span className={`fw-bold d-inline-flex align-items-center gap-1 ${isIncome ? 'text-success' : 'text-danger'}`}>
                             {isIncome ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                            ${Math.abs(movement.amount).toFixed(2)}
+                            {getCurrencySymbol()}{Math.abs(movement.amount).toFixed(2)}
                           </span>
                         </td>
                         <td className="text-end pe-4">
