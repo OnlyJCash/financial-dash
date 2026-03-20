@@ -3,6 +3,12 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { Movement, Reminder, Label, Account } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  getAccounts, addAccount as dbAddAccount, deleteAccount as dbDeleteAccount,
+  getAllMovements, addMovement as dbAddMovement, deleteMovement as dbDeleteMovement,
+  getAllReminders, addReminder as dbAddReminder, updateReminder as dbUpdateReminder, deleteReminder as dbDeleteReminder,
+  getLabels, addLabel as dbAddLabel, deleteLabel as dbDeleteLabel
+} from '@/app/actions/dynamodb';
 
 interface AppContextType {
   accounts: Account[];
@@ -36,29 +42,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [labels, setLabels] = useState<Label[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load from local storage
+  // Load from DynamoDB
   useEffect(() => {
-    const savedAccounts = localStorage.getItem('app_accounts');
-    const savedActiveAccount = localStorage.getItem('app_active_account');
-    const savedMovements = localStorage.getItem('app_movements');
-    const savedReminders = localStorage.getItem('app_reminders');
-    const savedLabels = localStorage.getItem('app_labels');
+    async function loadData() {
+      try {
+        const [dbAccounts, dbMovements, dbReminders, dbLabels] = await Promise.all([
+          getAccounts(),
+          getAllMovements(),
+          getAllReminders(),
+          getLabels()
+        ]);
+        setAccounts(dbAccounts);
+        setAllMovements(dbMovements);
+        setAllReminders(dbReminders);
+        setLabels(dbLabels);
 
-    if (savedAccounts) setAccounts(JSON.parse(savedAccounts));
-    if (savedActiveAccount) setActiveAccountId(savedActiveAccount);
-    if (savedMovements) setAllMovements(JSON.parse(savedMovements));
-    if (savedReminders) setAllReminders(JSON.parse(savedReminders));
-    if (savedLabels) setLabels(JSON.parse(savedLabels));
+        const savedActiveAccount = localStorage.getItem('app_active_account');
+        if (savedActiveAccount) setActiveAccountId(savedActiveAccount);
 
-    setIsLoaded(true);
+        setIsLoaded(true);
+      } catch (err) {
+        console.error("Failed to load initial data", err);
+        setIsLoaded(true);
+      }
+    }
+    loadData();
   }, []);
 
-  // Save changes to local storage
+  // Save active account to local storage (since it's purely UI state)
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('app_accounts', JSON.stringify(accounts));
-      
-      // If the active account is deleted, unset it
       if (activeAccountId && !accounts.some(a => a.id === activeAccountId)) {
         setActiveAccountId(null);
         localStorage.removeItem('app_active_account');
@@ -69,24 +82,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [accounts, activeAccountId, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('app_movements', JSON.stringify(allMovements));
-    }
-  }, [allMovements, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('app_reminders', JSON.stringify(allReminders));
-    }
-  }, [allReminders, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('app_labels', JSON.stringify(labels));
-    }
-  }, [labels, isLoaded]);
 
   const activeAccount = useMemo(() => 
     accounts.find(a => a.id === activeAccountId), 
@@ -109,15 +104,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     setAccounts(prev => {
       const nextAccounts = [...prev, newAccount];
-      
-      // Data Migration: If this is the FIRST account created, 
-      // assign any orphaned movements/reminders to it to prevent data loss or leakage
       if (prev.length === 0) {
         setAllMovements(mPrev => mPrev.map(m => m.accountId ? m : { ...m, accountId: id }));
         setAllReminders(rPrev => rPrev.map(r => r.accountId ? r : { ...r, accountId: id }));
+        // Note: migrating orphans in DB isn't fully implemented in DB here, but will apply to UI state
       }
       return nextAccounts;
     });
+    
+    dbAddAccount(newAccount).catch(console.error);
 
     if (!activeAccountId) {
       setActiveAccount(id);
@@ -126,9 +121,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAccount = (id: string) => {
     setAccounts(prev => prev.filter(a => a.id !== id));
-    // Clean up related data automatically
     setAllMovements(prev => prev.filter(m => m.accountId !== id));
     setAllReminders(prev => prev.filter(r => r.accountId !== id));
+    
+    dbDeleteAccount(id).catch(console.error);
   };
 
   const setActiveAccount = (id: string | null) => {
@@ -137,34 +133,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addMovement = (movement: Omit<Movement, 'id' | 'accountId'>) => {
     if (!activeAccountId) return;
-    setAllMovements(prev => [...prev, { ...movement, id: uuidv4(), accountId: activeAccountId }]);
+    const newMovement = { ...movement, id: uuidv4(), accountId: activeAccountId };
+    setAllMovements(prev => [...prev, newMovement]);
+    dbAddMovement(newMovement).catch(console.error);
   };
 
   const deleteMovement = (id: string) => {
     setAllMovements(prev => prev.filter(m => m.id !== id));
+    dbDeleteMovement(id).catch(console.error);
   };
 
   const addReminder = (reminder: Omit<Reminder, 'id' | 'accountId'>) => {
     if (!activeAccountId) return;
-    setAllReminders(prev => [...prev, { ...reminder, id: uuidv4(), accountId: activeAccountId }]);
+    const newReminder = { ...reminder, id: uuidv4(), accountId: activeAccountId };
+    setAllReminders(prev => [...prev, newReminder]);
+    dbAddReminder(newReminder).catch(console.error);
   };
 
   const dismissReminder = (id: string) => {
-    setAllReminders(prev =>
-      prev.map(r => (r.id === id ? { ...r, dismissed: true } : r))
-    );
+    const reminder = allReminders.find(r => r.id === id);
+    if (reminder) {
+      const updatedReminder = { ...reminder, dismissed: true };
+      setAllReminders(prev => prev.map(r => r.id === id ? updatedReminder : r));
+      dbUpdateReminder(updatedReminder).catch(console.error);
+    }
   };
 
   const deleteReminder = (id: string) => {
     setAllReminders(prev => prev.filter(r => r.id !== id));
+    dbDeleteReminder(id).catch(console.error);
   };
 
   const addLabel = (label: Omit<Label, 'id'>) => {
-    setLabels(prev => [...prev, { ...label, id: uuidv4() }]);
+    const newLabel = { ...label, id: uuidv4() };
+    setLabels(prev => [...prev, newLabel]);
+    dbAddLabel(newLabel).catch(console.error);
   };
 
   const deleteLabel = (id: string) => {
     setLabels(prev => prev.filter(l => l.id !== id));
+    dbDeleteLabel(id).catch(console.error);
   };
 
   return (
