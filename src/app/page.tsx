@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Button, Badge, Modal, Form } from 'react-bootstrap';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
@@ -8,10 +8,24 @@ import Link from 'next/link';
 import { PlusCircle, Bell, X, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
 import moment from 'moment';
+import { DefaultQuickFinancialReportService } from '@/service/financial/QuickFinancialReport';
+import { QuickFinancialReport } from '@/types';
 
 export default function DashboardPage() {
   const { balance, movements, reminders, dismissReminder, addReminder, activeAccount } = useApp();
   const { user } = useAuth();
+
+  const [quickFinancialReport, setQuickFinancialReport] = useState<QuickFinancialReport>({
+    totalIncome: 0,
+    totalExpenses: 0,
+    monthlyBalance: 0
+  });
+
+  useEffect(() => {
+    new DefaultQuickFinancialReportService().retrieve(activeAccount?.id || '').then(res => {
+      setQuickFinancialReport(res);
+    })
+  }, [activeAccount]);
 
   const getCurrencySymbol = () => {
     if (activeAccount?.currency === 'EUR') return '€';
@@ -52,16 +66,11 @@ export default function DashboardPage() {
           <h2 className="fw-bold mb-0">Dashboard</h2>
           <p className="text-muted mb-0">Welcome back, {user?.username}!</p>
         </div>
-        <Link href="/movements/new" passHref legacyBehavior>
-          <Button variant="primary" className="d-flex align-items-center gap-2">
-            <PlusCircle size={18} /> Add Movement
-          </Button>
-        </Link>
       </div>
 
       <Row className="g-4 mb-4">
         {/* Balance Card */}
-        <Col md={4}>
+        <Col md={3}>
           <Card className="h-100 bg-primary text-white shadow-sm">
             <Card.Body className="d-flex flex-column justify-content-center">
               <h6 className="text-white-50 text-uppercase fw-semibold mb-2">Total Balance</h6>
@@ -71,7 +80,40 @@ export default function DashboardPage() {
             </Card.Body>
           </Card>
         </Col>
+        {/* Total Expenses Card */}
+        <Col md={3}>
+          <Card className="h-100 bg-primary text-white shadow-sm">
+            <Card.Body className="d-flex flex-column justify-content-center">
+              <h6 className="text-white-50 text-uppercase fw-semibold mb-2">Monthly Balance</h6>
+              <h5 className="display-5 fw-bold mb-0">
+                {getCurrencySymbol()}{quickFinancialReport.monthlyBalance.toFixed(2)}
+              </h5>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={3}>
+          <Card className="h-100 bg-danger text-white shadow-sm">
+            <Card.Body className="d-flex flex-column justify-content-center">
+              <h6 className="text-white-50 text-uppercase fw-semibold mb-2">Monthly Expenses</h6>
+              <h5 className="display-5 fw-bold mb-0">
+                {getCurrencySymbol()}{quickFinancialReport.totalExpenses.toFixed(2)}
+              </h5>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={3}>
+          <Card className="h-100 bg-success text-white shadow-sm">
+            <Card.Body className="d-flex flex-column justify-content-center">
+              <h6 className="text-white-50 text-uppercase fw-semibold mb-2">Monthly Income</h6>
+              <h5 className="display-5 fw-bold mb-0">
+                {getCurrencySymbol()}{quickFinancialReport.totalIncome.toFixed(2)}
+              </h5>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
 
+      <Row className="g-4 mb-4">
         {/* Reminders Card */}
         <Col md={8}>
           <Card className="h-100 shadow-sm border-0">
@@ -128,6 +170,15 @@ export default function DashboardPage() {
       </Row>
 
       {/* Recent Movements */}
+      <Row className="g-4 mb-4 d-flex justify-content-end">
+        <Col md={2} >
+          <Link href="/movements/new" passHref legacyBehavior>
+            <Button variant="primary" className="d-flex align-items-center gap-2">
+              <PlusCircle size={18} /> Add Movement
+            </Button>
+          </Link>
+        </Col>
+      </Row>
       <Card className="shadow-sm border-0">
         <Card.Header className="bg-white border-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center gap-2">
