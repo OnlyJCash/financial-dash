@@ -7,11 +7,12 @@ import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { PlusCircle, Bell, X, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
+import moment from 'moment';
 
 export default function DashboardPage() {
   const { balance, movements, reminders, dismissReminder, addReminder, activeAccount } = useApp();
   const { user } = useAuth();
-  
+
   const getCurrencySymbol = () => {
     if (activeAccount?.currency === 'EUR') return '€';
     if (activeAccount?.currency === 'GBP') return '£';
@@ -22,12 +23,16 @@ export default function DashboardPage() {
   const [reminderForm, setReminderForm] = useState({
     title: '',
     type: 'once' as 'once' | 'recurrent',
-    dueDate: new Date().toISOString().split('T')[0]
+    frequency: 'monthly' as 'monthly',
+    dueDate: moment().format('YYYY-MM-DD'),
+    validUntil: moment().format('YYYY-MM-DD')
   });
 
   // Get only un-dismissed reminders
-  const activeReminders = reminders.filter(r => !r.dismissed);
-  
+  const activeReminders = reminders
+    .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime())
+    .filter(r => !r.dismissed && new Date(r.dueDate) <= moment().add(1, 'month').toDate());
+
   // Recent movements (last 5)
   const recentMovements = [...movements]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -90,8 +95,8 @@ export default function DashboardPage() {
               ) : (
                 <div className="d-flex flex-column gap-2">
                   {activeReminders.map(reminder => (
-                    <div 
-                      key={reminder.id} 
+                    <div
+                      key={reminder.id}
                       className={`d-flex align-items-center justify-content-between p-3 rounded border-start border-4 border-${getReminderVariant(reminder.dueDate)} bg-light`}
                     >
                       <div>
@@ -105,9 +110,9 @@ export default function DashboardPage() {
                           Due: {format(new Date(reminder.dueDate), 'MMM dd, yyyy')}
                         </small>
                       </div>
-                      <Button 
-                        variant="link" 
-                        className="text-muted p-0" 
+                      <Button
+                        variant="link"
+                        className="text-muted p-0"
                         onClick={() => dismissReminder(reminder.id)}
                         title="Dismiss Reminder"
                       >
@@ -193,31 +198,35 @@ export default function DashboardPage() {
             title: reminderForm.title,
             type: reminderForm.type,
             dueDate: reminderForm.dueDate,
+            validUntil: reminderForm.validUntil,
+            frequency: reminderForm.frequency,
             dismissed: false
           });
           setShowReminderModal(false);
           setReminderForm({
             title: '',
             type: 'once',
-            dueDate: new Date().toISOString().split('T')[0]
+            frequency: 'monthly',
+            dueDate: moment().format('YYYY-MM-DD'),
+            validUntil: moment().format('YYYY-MM-DD')
           });
         }}>
           <Modal.Body>
             <Form.Group className="mb-3">
               <Form.Label>Reminder Title</Form.Label>
-              <Form.Control 
-                type="text" 
-                required 
+              <Form.Control
+                type="text"
+                required
                 value={reminderForm.title}
-                onChange={e => setReminderForm({...reminderForm, title: e.target.value})}
+                onChange={e => setReminderForm({ ...reminderForm, title: e.target.value })}
                 placeholder="e.g. Pay Internet Bill"
               />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Type</Form.Label>
-              <Form.Select 
+              <Form.Select
                 value={reminderForm.type}
-                onChange={e => setReminderForm({...reminderForm, type: e.target.value as 'once' | 'recurrent'})}
+                onChange={e => setReminderForm({ ...reminderForm, type: e.target.value as 'once' | 'recurrent' })}
               >
                 <option value="once">One-time</option>
                 <option value="recurrent">Recurrent</option>
@@ -225,13 +234,35 @@ export default function DashboardPage() {
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Due Date</Form.Label>
-              <Form.Control 
-                type="date" 
+              <Form.Control
+                type="date"
                 required
                 value={reminderForm.dueDate}
-                onChange={e => setReminderForm({...reminderForm, dueDate: e.target.value})}
+                onChange={e => setReminderForm({ ...reminderForm, dueDate: e.target.value })}
               />
             </Form.Group>
+            {reminderForm.type === 'recurrent' &&
+              <>
+                <Form.Group className="mb-3">
+                  <Form.Label>Frequency</Form.Label>
+                  <Form.Select
+                    value={reminderForm.frequency} disabled
+                    onChange={e => setReminderForm({ ...reminderForm, frequency: e.target.value as 'monthly' })}
+                  >
+                    <option value="monthly">Monthly</option>
+                  </Form.Select>
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Valid Until</Form.Label>
+                  <Form.Control
+                    type="date"
+                    required
+                    value={reminderForm.validUntil}
+                    onChange={e => setReminderForm({ ...reminderForm, validUntil: e.target.value })}
+                  />
+                </Form.Group>
+              </>
+            }
           </Modal.Body>
           <Modal.Footer>
             <Button variant="outline-secondary" onClick={() => setShowReminderModal(false)}>
@@ -243,6 +274,6 @@ export default function DashboardPage() {
           </Modal.Footer>
         </Form>
       </Modal>
-    </Container>
+    </Container >
   );
 }
