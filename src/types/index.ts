@@ -30,6 +30,10 @@ export interface Reminder {
   dueDate: string;
   dismissed: boolean;
   accountId?: string;
+  startsAt?: string;
+  validUntil?: string;
+  lastDismissedOccurrenceAt?: string;
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
 }
 
 export interface User {
