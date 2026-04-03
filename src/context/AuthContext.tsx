@@ -2,6 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/types';
+import { useRouter, usePathname } from 'next/navigation';
+import outputs from '@/amplify_outputs.json';
+import { Amplify } from 'aws-amplify';
+import { getCurrentUser, signOut } from 'aws-amplify/auth';
+
+Amplify.configure(outputs, { ssr: true });
 
 interface AuthContextType {
   user: User | null;
@@ -16,16 +22,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const router = useRouter();
+  const pathname = usePathname();
+
   useEffect(() => {
     // Check local storage on mount
-    const storedUser = localStorage.getItem('auth_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Failed to parse user from local storage');
+    getCurrentUser().then((currentUser) => {
+      if (currentUser) {
+        login(currentUser.signInDetails?.loginId || '');
+        router.push('/');
+      } else {
+        router.push('/login');
       }
-    }
+    });
+
     setIsLoading(false);
   }, []);
 
@@ -37,8 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    console.log('logout');
     setUser(null);
     localStorage.removeItem('auth_user');
+    signOut();
   };
 
   return (
