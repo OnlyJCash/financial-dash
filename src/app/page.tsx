@@ -92,7 +92,7 @@ export default function DashboardPage() {
           </Card>
         </Col>
         <Col md={3}>
-          <Card className="h-100 bg-danger text-white shadow-sm">
+          <Card className="h-100 bg-danger text-white shadow-sm" border="primary">
             <Card.Body className="d-flex flex-column justify-content-center">
               <h6 className="text-white-50 text-uppercase fw-semibold mb-2">Monthly Expenses</h6>
               <h5 className="display-5 fw-bold mb-0">
