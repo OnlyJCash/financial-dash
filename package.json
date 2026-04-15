@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-amplify/ui-react": "^6.15.2",
     "@aws-sdk/client-dynamodb": "^3.1013.0",
     "@aws-sdk/lib-dynamodb": "^3.1013.0",
     "bootstrap": "^5.3.8",
@@ -23,6 +24,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@aws-amplify/backend-cli": "^1.8.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

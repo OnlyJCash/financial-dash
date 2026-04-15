@@ -7,10 +7,17 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Container, Navbar, Nav, Button, Dropdown, Form, Card } from 'react-bootstrap';
 import Link from 'next/link';
 import { Plus, Wallet, ChevronDown, Check } from 'lucide-react';
+import outputs from '@/amplify_outputs.json';
+import { Amplify } from 'aws-amplify';
+import { getCurrentUser } from 'aws-amplify/auth';
+import { User } from '@/types';
+
+Amplify.configure(outputs, { ssr: true });
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
-  const { user, logout, isLoading: authLoading } = useAuth();
+  const { logout, isLoading: authLoading } = useAuth();
   const { accounts, activeAccountId, setActiveAccount, addAccount, isLoaded: appLoaded } = useApp();
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -18,10 +25,16 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const [newAccountData, setNewAccountData] = useState({ name: '', currency: 'USD' });
 
   useEffect(() => {
-    if (!authLoading && !user && pathname !== '/login') {
-      router.push('/login');
-    }
-  }, [user, authLoading, pathname, router]);
+    getCurrentUser().then((currentUser) => {
+      if (!currentUser) {
+        if (!authLoading && pathname !== '/login') {
+          router.push('/login');
+        }
+      } else {
+        setUser({ username: currentUser.signInDetails?.loginId || '', role: 'admin' });
+      }
+    });
+  }, [authLoading, pathname, router]);
 
   if (authLoading || !appLoaded) {
     return <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
@@ -37,9 +50,9 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   }
 
   // If not authenticated, we shouldn't render the dashboard (redirect in progress)
-  if (!user) {
-    return null; 
-  }
+  /*   if (!user) {
+      return null;
+    } */
 
   const activeAccount = accounts.find(a => a.id === activeAccountId);
 
@@ -61,8 +74,8 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
           </div>
           <h3 className="fw-bold mb-3">Welcome to FinDash</h3>
           <p className="text-muted mb-4">
-            {accounts.length === 0 
-              ? "To get started, please create your first account." 
+            {accounts.length === 0
+              ? "To get started, please create your first account."
               : "Please select an account to view your dashboard."}
           </p>
 
@@ -71,9 +84,9 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
               <h6 className="fw-bold mb-3">Create New Account</h6>
               <Form.Group className="mb-3">
                 <Form.Label className="small fw-semibold">Account Name</Form.Label>
-                <Form.Control 
-                  type="text" 
-                  required 
+                <Form.Control
+                  type="text"
+                  required
                   placeholder="e.g. Main Checking"
                   value={newAccountData.name}
                   onChange={e => setNewAccountData(prev => ({ ...prev, name: e.target.value }))}
@@ -81,7 +94,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
               </Form.Group>
               <Form.Group className="mb-4">
                 <Form.Label className="small fw-semibold">Currency</Form.Label>
-                <Form.Select 
+                <Form.Select
                   value={newAccountData.currency}
                   onChange={e => setNewAccountData(prev => ({ ...prev, currency: e.target.value }))}
                 >
@@ -104,9 +117,9 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
           ) : (
             <div className="d-flex flex-column gap-3">
               {accounts.length > 0 && accounts.map(acc => (
-                <Button 
-                  key={acc.id} 
-                  variant="outline-primary" 
+                <Button
+                  key={acc.id}
+                  variant="outline-primary"
                   size="lg"
                   className="w-100 text-start d-flex justify-content-between align-items-center p-3"
                   onClick={() => setActiveAccount(acc.id)}
@@ -120,9 +133,9 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
                 <span className="px-3 text-muted small text-uppercase fw-semibold">Or</span>
                 <hr className="flex-grow-1" />
               </div>
-              <Button 
-                variant={accounts.length === 0 ? "primary" : "light"} 
-                size="lg" 
+              <Button
+                variant={accounts.length === 0 ? "primary" : "light"}
+                size="lg"
                 className="w-100 d-flex align-items-center justify-content-center gap-2"
                 onClick={() => setShowNewAccountForm(true)}
               >
@@ -142,12 +155,12 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
           <Navbar.Brand as={Link} href="/" className="fw-bold d-flex align-items-center gap-2">
             💸 FinDash
           </Navbar.Brand>
-          
+
           {accounts.length > 0 && (
             <Dropdown className="ms-3 me-auto border-start border-secondary ps-3">
-              <Dropdown.Toggle 
-                variant="dark" 
-                id="account-dropdown" 
+              <Dropdown.Toggle
+                variant="dark"
+                id="account-dropdown"
                 className="d-flex align-items-center gap-2 border-0 bg-transparent text-white fw-medium px-2 py-1"
               >
                 <Wallet size={16} className="text-primary" />
@@ -158,8 +171,8 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
               <Dropdown.Menu className="shadow-sm border-0 mt-2">
                 <Dropdown.Header className="text-uppercase small fw-bold">Your Accounts</Dropdown.Header>
                 {accounts.map(acc => (
-                  <Dropdown.Item 
-                    key={acc.id} 
+                  <Dropdown.Item
+                    key={acc.id}
                     onClick={() => setActiveAccount(acc.id)}
                     className="d-flex align-items-center justify-content-between py-2"
                     active={acc.id === activeAccountId}
@@ -169,7 +182,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
                   </Dropdown.Item>
                 ))}
                 <Dropdown.Divider />
-                <Dropdown.Item 
+                <Dropdown.Item
                   className="d-flex align-items-center gap-2 text-primary fw-medium py-2"
                   onClick={() => {
                     setActiveAccount(null);
@@ -191,10 +204,10 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
                 <Nav.Link as={Link} href="/report" active={pathname === '/report'}>Report</Nav.Link>
               </Nav>
             )}
-            
+
             <Nav className="align-items-center">
               <Navbar.Text className="me-3 d-none d-md-block">
-                <span className="text-white-50 small">User:</span> <strong className="text-white">{user.username}</strong>
+                <span className="text-white-50 small">User:</span> <strong className="text-white">{user?.username}</strong>
               </Navbar.Text>
               <Button variant="outline-light" size="sm" onClick={logout} className="rounded-pill px-3">
                 Logout
