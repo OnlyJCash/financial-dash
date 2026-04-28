@@ -7,12 +7,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Container, Navbar, Nav, Button, Dropdown, Form, Card } from 'react-bootstrap';
 import Link from 'next/link';
 import { Plus, Wallet, ChevronDown, Check } from 'lucide-react';
-import outputs from '@/amplify_outputs.json';
-import { Amplify } from 'aws-amplify';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { User } from '@/types';
-
-Amplify.configure(outputs, { ssr: true });
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const { logout, isLoading: authLoading } = useAuth();

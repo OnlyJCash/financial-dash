@@ -3,11 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/types';
 import { useRouter, usePathname } from 'next/navigation';
-import outputs from '@/amplify_outputs.json';
-import { Amplify } from 'aws-amplify';
 import { getCurrentUser, signOut } from 'aws-amplify/auth';
-
-Amplify.configure(outputs, { ssr: true });
 
 interface AuthContextType {
   user: User | null;

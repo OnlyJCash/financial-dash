@@ -4,11 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Container, Card, Form, Button, Alert } from 'react-bootstrap';
-import { confirmSignIn, signIn } from 'aws-amplify/auth'
-import { Amplify } from 'aws-amplify';
-import outputs from '@/amplify_outputs.json';
-
-Amplify.configure(outputs, { ssr: true });
+import { confirmSignIn, signIn } from 'aws-amplify/auth';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');

@@ -4,9 +4,6 @@ import { Inter } from "next/font/google";
 import '@aws-amplify/ui-react/styles.css';
 import "./globals.css";
 import { Providers } from "@/components/Providers";
-import { LayoutWrapper } from "@/components/LayoutWrapper";
-
-import ConfigureAmplify from "@/lib/cognito-users";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,14 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
-        <ConfigureAmplify />
         <Providers>
-          <LayoutWrapper>
-            {children}
-          </LayoutWrapper>
+          {children}
         </Providers>
       </body>
     </html>
   );
 }
-
