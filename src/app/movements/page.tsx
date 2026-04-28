@@ -37,7 +37,7 @@ export default function MovementsPage() {
       }
     }
 
-    const matchesSearch = 
+    const matchesSearch =
       movement.shortDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.longDescription.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -74,9 +74,9 @@ export default function MovementsPage() {
                 <InputGroup.Text className="bg-white border-end-0">
                   <Search size={16} className="text-muted" />
                 </InputGroup.Text>
-                <Form.Control 
-                  type="text" 
-                  placeholder="Search description..." 
+                <Form.Control
+                  type="text"
+                  placeholder="Search description..."
                   className="border-start-0 ps-0"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
@@ -98,16 +98,16 @@ export default function MovementsPage() {
             </div>
             <div className="col-md-3">
               <Form.Label className="small text-muted fw-semibold">Start Date</Form.Label>
-              <Form.Control 
-                type="date" 
+              <Form.Control
+                type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
               />
             </div>
             <div className="col-md-3">
               <Form.Label className="small text-muted fw-semibold">End Date</Form.Label>
-              <Form.Control 
-                type="date" 
+              <Form.Control
+                type="date"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
               />
@@ -141,6 +141,7 @@ export default function MovementsPage() {
                   filteredMovements.map(movement => {
                     const isIncome = movement.amount > 0;
                     const label = getLabel(movement.labelId);
+
                     return (
                       <tr key={movement.id} className={`movement-item ${isIncome ? 'income' : 'expense'}`}>
                         <td className="ps-4 text-nowrap">
@@ -155,6 +156,7 @@ export default function MovementsPage() {
                         <td>
                           {label ? (
                             <Badge
+                              bg={label.color ?? 'primary'}
                               pill
                               style={{ backgroundColor: label.color, color: '#fff' }}
                             >
@@ -176,9 +178,9 @@ export default function MovementsPage() {
                           </span>
                         </td>
                         <td className="text-end pe-4">
-                          <Button 
-                            variant="outline-danger" 
-                            size="sm" 
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
                             className="border-0"
                             onClick={() => {
                               if (window.confirm('Are you sure you want to delete this movement?')) {
